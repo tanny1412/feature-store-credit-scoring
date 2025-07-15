@@ -1,143 +1,115 @@
-# Real-time Credit Scoring with Feast on Local Setup
+# Loan Application UI
 
 ## Overview
-This tutorial is built from the original **[feast-aws-credit-scoring-tutorial](https://github.com/feast-dev/feast-aws-credit-scoring-tutorial)**.  
 
-This tutorial demonstrates the use of Feast as part of a real-time credit scoring application.
-* The primary training dataset is a loan table. This table contains historic loan data with accompanying features. The dataset also contains a target variable, namely whether a user has defaulted on their loan.
-* Feast is used during training to enrich the loan table with zipcode and credit history features from the **data** folder.
-* Feast is also used to serve the latest zipcode and credit history features for online credit scoring using Redis
+This repository contains a real-time loan approval prediction application using Feast for feature management
+and scikit-learn for model training. Users can interact with a Streamlit-based UI to submit loan applications
+and receive instant approval/rejection decisions based on historical data and real-time features.
 
-To get a better feel of what this example entails, you can view the steps outlined below in notebook 
-form in [demo_walkthrough.ipynb](demo_walkthrough.ipynb).
+## Repository Structure
+
+- feature_repo/          : Feast feature repository (feature definitions, offline store data)
+- data/                  : Historical loan, credit history, and zipcode datasets.
+- credit_model.py        : Module for training and making predictions with the credit scoring model.
+- train_model.py         : Script to train the CreditScoringModel using Feast feature store.
+- loan_app_ui.py         : Streamlit application for user interaction.
+- model.bin              : Serialized trained model (Decision Tree classifier).
+- encoder.bin            : Serialized ordinal encoder for categorical features.
+- requirements.txt       : Python dependencies.
+- streamlit.png          : Screenshot of the Streamlit UI.
+- LICENSE                : License file.
 
 ## Requirements
 
-* Python 3.11
-* Registry: Postgresql  
-* Offline Storage: duckdb  
-* Online Storage: Redis
+- Python 3.11+
+- Redis (for Feast online store)
+- PostgreSQL (for Feast registry)
+- DuckDB (for Feast offline store)
+- Docker (optional, for local Redis and PostgreSQL)
 
-## Setup
+## Installation
 
-### Database Setup
- 
-You can setup the storages with Podman or Docker:  
+1. Clone the repository:
 
-1. Setup Postgresql and Redis by [Podman](https://podman.io/):  
-```
-podman pull docker://bitnami/postgresql  
-podman run -d -p 5432:5432 --name postgresql -e "ALLOW_EMPTY_PASSWORD=yes" docker.io/bitnami/postgresql:latest  
+   ```bash
+   git clone <repo_url>
+   cd <repo_name>
+   ```
 
-podman pull docker://bitnami/redis:latest
-podman run -d -p 6379:6379 --name redis docker.io/bitnami/redis:latest  
-```
+2. (Optional) Create and activate a virtual environment:
 
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-2. Setup Postgresql and Redis by Docker:  
-```
-docker pull bitnami/postgresql:latest
-docker run -d -p 5432:5432 --name postgresql -e "ALLOW_EMPTY_PASSWORD=yes" bitnami/postgresql:latest
+3. Install Python dependencies:
 
-docker pull bitnami/redis:latest
-docker run -d -p 6379:6379 --name redis -e "ALLOW_EMPTY_PASSWORD=yes" bitnami/redis:latest
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Please **create** a database named "feast" for Feast's SQL Registry service. It is required by the Registry setting in the **feature_store.yaml**. Feel free to use other names, but to make sure that they are the same and consistent.
+## Setting up the Feature Store
 
-This can be done via:
+The feature repository is located in `feature_repo/`. The `feature_store.yaml` defines:
+
+- **Registry**: PostgreSQL (default: postgresql://postgres@localhost:5432/feast)
+- **Online store**: Redis (default: localhost:6379)
+- **Offline store**: DuckDB
+
+### Starting Redis and PostgreSQL (optional)
+
+Use Docker to start services:
+
 ```bash
-% psql postgresql://postgres@localhost:5432
-psql (13.4, server 16.3)
-WARNING: psql major version 13, server major version 16.
-         Some psql features might not work.
-Type "help" for help.
+# Start PostgreSQL
+docker run -d --name feast-postgres -p 5432:5432 \
+  -e POSTGRES_DB=feast -e POSTGRES_PASSWORD= \
+  postgres:15-alpine
 
-postgres=# create database feast
-postgres-# ;
-CREATE DATABASE
+# Start Redis
+docker run -d --name feast-redis -p 6379:6379 redis:7-alpine
 ```
 
-### Pointing to remote databases
+### Deploying and Materializing Features
 
-Rather than provisioning the storage providers locally, you can also provision
-them remotely and point to them in [feature_store.yaml](feature_repo/feature_store.yaml)
-by specifying the following environment variables:
-
-  * POSTGRES_HOST
-  * POSTGRES_USER
-  * POSTGRES_PASSWORD
-  * POSTGRES_DB
-  * REDIS_HOST
-
-### Setting up Feast
-
-Install Feast using pip
-
-```
-pip install -r requirements.txt
-```
-
-We have already set up a feature repository in [feature_repo/](feature_repo/). As a result, all we have to do is configure the [feature_store.yaml/](feature_repo/feature_store.yaml) in the feature repository. Please set the connection string of the Postgresql and Redis according to your local infra setup.  
-
-Deploy the feature store by running `apply` from within the `feature_repo/` folder
-```
-cd feature_repo/
+```bash
+cd feature_repo
 feast apply
-```
-```
-Deploying infrastructure for credit_history
-Deploying infrastructure for zipcode_features
-```
 
-Next we load features into the online store using the `materialize-incremental` command. This command will load the
-latest feature values from a data source into the online store.
-
-```
-CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
+# Incremental materialization up to current UTC time
+CURRENT_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 feast materialize-incremental $CURRENT_TIME
-```
 
-Alternatively, you may have to run
-```
-CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
-feast materialize 1990-01-00T00:00:00  $CURRENT_TIME
-```
+# Or full materialization
+# feast materialize 1990-01-01T00:00:00 $CURRENT_TIME
 
-Return to the root of the repository
-```
 cd ..
 ```
 
-## Train and test the model
+## Training the Model
 
-Finally, we train the model using a combination of loan data from the parque file under the `./data` folder and our zipcode and credit history features from duckdb (with Filesource). And then we test online inference by reading those same features from Redis.
+Train the CreditScoringModel using historical loan data and Feast:
 
-```
-python run.py
-```
-The script should then output the result of a single loan application
-```
-loan rejected!
-```
-
-## Interactive demo (using Streamlit)
-
-Once the credit scoring model has been trained it can be used for interactive loan applications using Streamlit:
-
-Simply start the Streamlit application
-```
-streamlit run streamlit_app.py
-```
-Then navigate to the URL on which Streamlit is being served. You should see a user interface through which loan applications can be made:
-
-![Streamlit Loan Application](streamlit.png)
-
-## Serving Demo and OpenAPI docs
-
-You can run
 ```bash
-python app.py
+python train_model.py
 ```
-And you'll be able to see the endpoints by going to http://127.0.0.1:8888/docs#/.
+
+This will save the trained model to `model.bin` and the encoder to `encoder.bin`.
+
+## Running the Streamlit App
+
+Launch the loan application UI:
+
+```bash
+streamlit run loan_app_ui.py
+```
+
+Open your browser at http://localhost:8501 to interact with the app.
+
+![Streamlit UI Screenshot](streamlit.png)
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
