@@ -6,6 +6,8 @@ This repository contains a real-time loan approval prediction application using 
 and scikit-learn for model training. Users can interact with a Streamlit-based UI to submit loan applications
 and receive instant approval/rejection decisions based on historical data and real-time features.
 
+**This project is licensed under the Apache License 2.0.**
+
 ## Repository Structure
 
 - feature_repo/          : Feast feature repository (feature definitions, offline store data)
@@ -111,5 +113,7 @@ Open your browser at http://localhost:8501 to interact with the app.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache License 2.0**.
+
+You may use, modify, and distribute this software under the terms of the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for the full license text and details.
 
