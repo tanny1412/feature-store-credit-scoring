@@ -9,3 +9,41 @@ infra/*.tfvars.json
 *.terraform*
 generate_data.py
 **.ipynb_checkpoints**
+
+# Python virtual environments
+.venv/
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.coverage
+htmlcov/
+tox/
+.pytest_cache/
+
+# Environment variables
+.env
+
+# IDE / editor directories
+.vscode/
+.idea/
+
+# Mac OS files
+.DS_Store
+# Other
+*~
