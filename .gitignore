@@ -47,3 +47,5 @@ tox/
 .DS_Store
 # Other
 *~
+
+cover.png
