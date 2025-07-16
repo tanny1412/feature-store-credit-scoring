@@ -1,4 +1,4 @@
-![Crash Course on Feast Feature Store for Real-Time Loan Approval Prediction](./cover.png)
+![Crash Course on Feast Feature Store for Real-Time Loan Approval Prediction](./cover.jpg)
 
 # Loan Application UI
 
